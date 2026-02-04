@@ -1,7 +1,9 @@
-name: Build and test the app
+name: Build, test and deploy the app
 
 on:
   push:
+    branches: [ "main" ]
+  pull_request:
     branches: [ "main" ]
 
 jobs:
@@ -21,9 +23,27 @@ jobs:
       run: npm install
     - name: Run tests
       run: npm test
+
+  run_security_scan:
+    needs: build_and_test
+    runs-on: ubuntu-latest
+       
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+        cache: 'npm'
+    - name: Install dependencies
+      run: npm install
+    - name: Run security scan with npm audit
+      run: npm audit
     
   deploy:
-    needs: build_and_test
+    needs: run_security_scan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to Render
